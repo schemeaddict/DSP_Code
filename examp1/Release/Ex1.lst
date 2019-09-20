@@ -1,0 +1,101 @@
+TMS320C2000 Assembler PC v18.1.4 Fri Jan 18 03:43:22 2019
+
+Tools Copyright (c) 1996-2018 Texas Instruments Incorporated
+../Ex1.asm                                                           PAGE    1
+
+       1              ;****************************************************************************************
+       2              ; file = ex1.asm
+       3              ; Quick examples of adds, subtracts and compares for conditional branching.
+       4              ; Dr. Karl Gugel, Jan/2019
+       5              ;
+       6              ; To be assembled using Code Composer Studio which requires a linker command 
+       7              ; file to tell CCR where to place code & data into DSP SRAM. 
+       8              ; The command file used = KG_2837x_RAM_lnk_cpu1.cmd
+       9              ; Important Code locations:
+      10              ;               .data   RAMLS0   (internal DSP memory) starting address = 08000 Hex, 2K Words
+      11              ;               .text   RAMLS2   (internal DSP memory) starting address = 09000 Hex, 2K Words
+      12              ;               .ebss   RAMLS4   (internal DSP memory) starting address = 0A000 Hex, 2K Words
+      13              ;
+      14                              .global         _c_int00        ;This assembler directive allows _c_int00 to be a
+      15                                                              ;global variable. This tells the linker where your
+      16                                                              ;program (.text code) begins and where to boot from. 
+      17              
+      18              ;****************** F335 Program Examples ***********************
+      19 00000000                       .text                   ;Program section starting at 0x9000 (internal DSP SRAM)
+      20                                                              
+      21 00000000       _c_int00:                               ;This label tells the linker where the entry (starting) point for 
+      22                                                      ;the first instruction in your program. 
+      23              
+      24              ;The following examples illustrate the ADD, SUB (subtract) and CMP (compare) instructions.  
+      25              ;It is important to understand how these instructions affect the flags (N,V,C,Z) in ST0.
+      26                                                              
+      27              ;ADD    => C,Z,N are either set or cleared. However if there is an overflow, V = 1 (set).
+      28              ;       => Else if there is no overflow, there is NO CHANGE to V.
+      29                                                              
+      30              ;SUB    => Z,N are either set or cleared.  However for C, if there is a borrow, C = 0 (cleared).
+      31              ;       => If there is no borrow, C = 1 (set).
+      32              ;       => As in the ADD instruction, if there is an overflow, V = 1 (set); Else, V = NO CHANGE.
+      33              
+      34              ;ADD & SUB can therefore create and overflow (V=1) but never clear it. Overflows are considered
+      35              ;very bad and are only cleared by a conditional branch that tests the V flag.  See below for an
+      36              ;example.
+      37              
+      38              ;CMP    => C,Z,N are set & cleared just like the SUB instruction. However no result is generated.
+      39              ;       => This is a great instruction for testing A>B or A<B where you don't want to modify the 
+      40              ;       => data.  i.e. finding max,min in an array or writing a sort routine
+      41              
+      42                                              ;For all the examples below, try to predict the outcome of the flags.
+      43                                                                      
+      44 00000000 28A8                  MOV             AH,#0x7fff              ;signed overflow or unsigned carry?
+         00000001 7FFF 
+      45 00000002 28A9                  MOV             AL,#0x7fff
+         00000003 7FFF 
+      46 00000004 94A9                  ADD             AL,AL                   ;AL,V,N,C,Z = ?
+      47                                              
+      48 00000005 28A8                  MOV             AH,#0x8000              ;signed overflow or unsigned carry?
+         00000006 8000 
+      49 00000007 28A9                  MOV             AL,#0x8000                      
+         00000008 8000 
+      50 00000009 94A8                  ADD             AL,AH                   ;AL,V,N,C,Z = ?
+      51 0000000a 6A1C                  B               END1,NOV                ;example of how V can be cleared
+TMS320C2000 Assembler PC v18.1.4 Fri Jan 18 03:43:22 2019
+
+Tools Copyright (c) 1996-2018 Texas Instruments Incorporated
+../Ex1.asm                                                           PAGE    2
+
+      52                              
+      53 0000000b 28A8                  MOV             AH,#0x7fff              ;signed overflow or unsigned carry?
+         0000000c 7FFF 
+      54 0000000d 28A9                  MOV             AL,#0x7fff                      
+         0000000e 7FFF 
+      55 0000000f 9EA8                  SUB             AL,AH                   ;AL-AH = ?,V,N,C,Z = ?
+      56 00000010 2908                  CLRC    C                               ;example of how to clear carry
+      57                              
+      58 00000011 28A8                  MOV             AH,#0x8000              ;signed overflow or unsigned carry?
+         00000012 8000 
+      59 00000013 28A9                  MOV             AL,#0x8000                      
+         00000014 8000 
+      60 00000015 9EA8                  SUB             AL,AH                   ;AL-AH = ?,V,N,C,Z = ?
+      61              
+      62 00000016 28A8                  MOV             AH,#0x8000              ;signed overflow or unsigned carry?
+         00000017 8000 
+      63 00000018 28A9                  MOV             AL,#0xFFFF                      
+         00000019 FFFF 
+      64 0000001a 94A8                  ADD             AL,AH                   ;AL,V,N,C,Z = ?
+      65 0000001b 6A0B                  B               END1,NOV                ;clear V for next example
+      66              
+      67 0000001c 28A8                  MOV             AH,#0x8000              ;signed overflow or unsigned carry?
+         0000001d 8000 
+      68 0000001e 28A9                  MOV             AL,#0xFFFF                      
+         0000001f FFFF 
+      69 00000020 9EA8                  SUB             AL,AH                   ;AL - AH =?,V,N,C,Z = ?
+      70                                              
+      71 00000021 28A8                  MOV             AH,#0xffff                      
+         00000022 FFFF 
+      72 00000023 9A01                  MOV             AL,#0x0001
+      73 00000024 54A8                  CMP             AL,AH                   ;AL - AH = ?,V,N,C,Z = ?
+      74 00000025 55A9                  CMP             AH,AL                   ;AH - AL = ?,V,N,C,Z = ?
+      75 00000026 6F00  END1    B               END1,UNC                ;infinite loop to prevent unititialized code execution
+      76              
+
+No Assembly Errors, No Assembly Warnings
